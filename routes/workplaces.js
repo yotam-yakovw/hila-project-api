@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const client = require('../redis/client');
 
-router.get('/', async (req, res) => {
-  const { userId } = req.body;
+router.get('/:userId', async (req, res) => {
+  const { userId } = req.params;
+  console.log(userId);
 
   if (!userId) {
     res.status(400).send('user id not provided!');
@@ -20,8 +21,9 @@ router.get('/', async (req, res) => {
   res.status(200).send(data);
 });
 
-router.post('/', async (req, res) => {
-  const { userId, workers, locations, notes } = req.body;
+router.post('/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { workers, locations, notes } = req.body;
 
   const redis = await client.json.set(`workplace:${userId}`, '$', {
     workers,
