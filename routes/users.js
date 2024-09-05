@@ -3,10 +3,6 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const client = require('../redis/client');
 
-router.get('/', async (req, res) => {
-  res.send('Hello User: ' + req.body.user);
-});
-
 router.post('/signup', async (req, res) => {
   const { email, password, workplace, isAdmin } = req.body;
 
@@ -43,11 +39,13 @@ router.post('/signin', async (req, res) => {
   const userId = await client.zScore('users', email);
 
   if (userId) {
-    const hash = await client.hGet(`user:${userId}`, 'password');
-    const isCorrect = await bcrypt.compare(password, hash);
+    const userHash = await client.hGetAll(`user:${userId}`);
+    const isCorrect = await bcrypt.compare(password, userHash.password);
 
     if (isCorrect) {
-      res.status(200).send('OK');
+      delete userHash.password;
+      userHash.id = userId;
+      res.status(200).send(userHash);
       return;
     }
   }
