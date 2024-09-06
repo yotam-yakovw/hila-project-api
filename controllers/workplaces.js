@@ -1,25 +1,24 @@
 const client = require('../redis/client');
 
-module.exports.getWorkplace = async (req, res) => {
+module.exports.getWorkplace = async (req, res, next) => {
   const { userId } = req.params;
-  console.log(userId);
-
-  if (!userId) {
-    res.status(400).send('user id not provided!');
-    return;
-  }
 
   const data = await client.json.get(`workplace:${userId}`);
 
-  if (!data) {
-    res.status(404).send('No data was found for this user id');
-    return;
-  }
+  try {
+    if (!data) {
+      const err = new Error('No data was found for this ID');
+      err.statusCode = 400;
+      throw err;
+    }
 
-  res.status(200).send(data);
+    res.status(200).send(data);
+  } catch (err) {
+    next(err);
+  }
 };
 
-module.exports.editWorkplace = async (req, res) => {
+module.exports.editWorkplace = async (req, res, next) => {
   const { userId } = req.params;
   const { workers, locations, notes } = req.body;
 
@@ -29,10 +28,13 @@ module.exports.editWorkplace = async (req, res) => {
     notes,
   });
 
-  if (redis === 'OK') {
-    res.status(200).send('Operation was successful');
-    return;
-  }
+  try {
+    if (redis !== 'OK') {
+      throw new Error('Update have failed!');
+    }
 
-  res.status(500).send('Operation failed!');
+    res.status(200).send('Update was successful');
+  } catch (err) {
+    next(err);
+  }
 };

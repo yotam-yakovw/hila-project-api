@@ -1,22 +1,28 @@
 const bcrypt = require('bcrypt');
 const client = require('../redis/client');
 
-module.exports.getUser = async (req, res) => {
+module.exports.getUser = async (req, res, next) => {
   const { userId } = req.params;
 
   const user = await client.hGetAll(`user:${userId}`);
 
-  if (user.email) {
+  try {
+    if (!user.email) {
+      const err = new Error('Requested user could not be found!');
+      err.statusCode = 404;
+      throw err;
+    }
     delete user.password;
     user.id = userId;
 
     res.status(200).send(user);
     return;
+  } catch (err) {
+    next(err);
   }
-  res.status(404).send('requested user could not be found!');
 };
 
-module.exports.signUp = async (req, res) => {
+module.exports.signUp = async (req, res, next) => {
   const { email, password, workplace, isAdmin } = req.body;
 
   const userId = await client.get('user:id');
@@ -30,7 +36,13 @@ module.exports.signUp = async (req, res) => {
     { NX: true }
   );
 
-  if (isNew) {
+  try {
+    if (!isNew) {
+      const err = new Error('User already exists!');
+      err.statusCode = 400;
+      throw err;
+    }
+
     const hash = await bcrypt.hash(password, 12);
     const redis = await client.hSet(`user:${userId}`, {
       email,
@@ -39,31 +51,36 @@ module.exports.signUp = async (req, res) => {
       isAdmin,
     });
 
-    if (redis === 'OK') {
-      client.incr('user:id');
-      res.status(200).send('User created!');
-      return;
+    if (redis !== 'OK') {
+      throw new Error('User could not be created!');
     }
 
-    res.status(500).send('User could not be created!');
-  } else {
-    res.status(400).send('User already exists!');
+    client.incr('user:id');
+    res.status(200).send('User created!');
+  } catch (err) {
+    next(err);
   }
 };
 
-module.exports.signIn = async (req, res) => {
+module.exports.signIn = async (req, res, next) => {
   const { email, password } = req.body;
 
   const userId = await client.zScore('users', email);
   const passMatch = await bcrypt.compare(password, userHash.password);
 
-  if (userId && passMatch) {
+  try {
+    if (!userId || !passMatch) {
+      const err = new Error('Incorrect email or password');
+      err.statusCode = 404;
+      throw err;
+    }
+
     const userHash = await client.hGetAll(`user:${userId}`);
 
     delete userHash.password;
     userHash.id = userId;
     res.status(200).send(userHash);
-    return;
+  } catch (err) {
+    next(err);
   }
-  res.status(404).send('Incorrect email or password');
 };

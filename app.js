@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const router = require('./routes/index');
 // Middleware
 const { requestLogger, errorLogger } = require('./middleware/logger');
+const errorHandler = require('./middleware/errorHandler');
 
 const { PORT } = process.env;
 
@@ -18,9 +19,10 @@ app.use(express.urlencoded({ extended: false }));
 app.use(requestLogger);
 app.use('/', router);
 app.use('*', (req, res) => {
-  res.status(404).send('Page does not exist!');
+  throw new Error({ message: 'not exist' });
 });
 app.use(errorLogger);
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Port: ${PORT}`);
