@@ -38,3 +38,24 @@ module.exports.editWorkplace = async (req, res, next) => {
     next(err);
   }
 };
+
+module.exports.editWorkplaceName = async (req, res, next) => {
+  const { userId } = req.params;
+  const { name } = req.body;
+
+  try {
+    if (name === '') {
+      const err = new Error('Name cannot be empty!');
+      err.statusCode = 400;
+      throw err;
+    }
+    const redis = await client.json.set(`workplace:${userId}`, '$.name', name);
+
+    if (redis !== 'OK') {
+      throw new Error('Name could not  be changed!');
+    }
+    res.status(200).send(redis);
+  } catch (err) {
+    next(err);
+  }
+};
