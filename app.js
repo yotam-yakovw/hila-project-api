@@ -7,14 +7,17 @@ const router = require('./routes/index');
 // Middleware
 const { requestLogger, errorLogger } = require('./middleware/logger');
 const errorHandler = require('./middleware/errorHandler');
+const rateLimiter = require('./middleware/rateLimiter');
 
 const { PORT } = process.env;
 
 app = express();
 
 app.use(helmet());
+app.use(rateLimiter);
 app.use(cors());
-app.use(express.json());
+app.options('*', cors());
+app.app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(requestLogger);
 app.use('/', router);
