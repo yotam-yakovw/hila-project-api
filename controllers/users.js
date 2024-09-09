@@ -1,10 +1,9 @@
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const client = require('../redis/client');
 
 module.exports.getUser = async (req, res, next) => {
-  const { userId } = req.params;
-
-  const user = await client.hGetAll(`user:${userId}`);
+  const user = await client.hGetAll(`user:${req.userId}`);
 
   try {
     if (!user.email) {
@@ -13,7 +12,7 @@ module.exports.getUser = async (req, res, next) => {
       throw err;
     }
     delete user.password;
-    user.id = userId;
+    user.id = req.userId;
 
     res.status(200).send(user);
     return;
@@ -66,6 +65,8 @@ module.exports.signIn = async (req, res, next) => {
   const { email, password } = req.body;
 
   const userId = await client.zScore('users', email);
+
+  const userHash = await client.hGetAll(`user:${userId}`);
   const passMatch = await bcrypt.compare(password, userHash.password);
 
   try {
@@ -75,11 +76,14 @@ module.exports.signIn = async (req, res, next) => {
       throw err;
     }
 
-    const userHash = await client.hGetAll(`user:${userId}`);
+    const { JWT_SECRET } = process.env;
+    const token = jwt.sign({ id: userId.toString() }, JWT_SECRET, {
+      expiresIn: '7d',
+    });
 
     delete userHash.password;
     userHash.id = userId;
-    res.status(200).send(userHash);
+    res.status(200).send({ userHash, token });
   } catch (err) {
     next(err);
   }

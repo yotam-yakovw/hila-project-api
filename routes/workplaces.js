@@ -6,8 +6,8 @@ const {
   editWorkplaceName,
 } = require('../controllers/workplaces');
 
-router.get('/:userId', getWorkplace);
-router.post('/:userId', editWorkplace);
-router.post('/:userId/name', editWorkplaceName);
+router.get('/', getWorkplace);
+router.post('/', editWorkplace);
+router.post('/name', editWorkplaceName);
 
 module.exports = router;
