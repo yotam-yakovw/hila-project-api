@@ -23,8 +23,6 @@ module.exports = (req, res, next) => {
       throw err;
     }
 
-    console.log(payload.id);
-
     req.userId = payload.id;
     next();
   } catch (err) {

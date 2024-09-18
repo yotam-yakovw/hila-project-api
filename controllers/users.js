@@ -66,11 +66,17 @@ module.exports.signIn = async (req, res, next) => {
 
   const userId = await client.zScore('users', email);
 
-  const userHash = await client.hGetAll(`user:${userId}`);
-  const passMatch = await bcrypt.compare(password, userHash.password);
-
   try {
-    if (!userId || !passMatch) {
+    if (!userId) {
+      const err = new Error('Incorrect email or password');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const userHash = await client.hGetAll(`user:${userId}`);
+    const passMatch = await bcrypt.compare(password, userHash.password);
+
+    if (!passMatch) {
       const err = new Error('Incorrect email or password');
       err.statusCode = 404;
       throw err;
