@@ -25,7 +25,7 @@ app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(requestLogger);
-app.use('/', router);
+app.use('/api', router);
 app.use('*', pageNotExist);
 app.use(errorLogger);
 app.use(errorHandler);
