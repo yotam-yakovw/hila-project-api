@@ -21,6 +21,44 @@ module.exports.getUser = async (req, res, next) => {
   }
 };
 
+module.exports.signUpRequest = async (req, res, next) => {
+  const { email, password, workplace } = req.body;
+
+  const requestId = await client.get('request:id');
+
+  const isNew = await client.zAdd(
+    'requests',
+    {
+      value: email,
+      score: requestId,
+    },
+    { NX: true }
+  );
+
+  try {
+    if (!isNew) {
+      const err = new Error('Request already exists for this email!');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const redis = await client.hSet(`request:${requestId}`, {
+      email,
+      password,
+      workplace,
+    });
+
+    if (redis !== 3) {
+      throw new Error('Request could not be created!');
+    }
+
+    client.incr('request:id');
+    res.status(200).send('Request sent!');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports.signUp = async (req, res, next) => {
   const { email, password, workplace, isAdmin } = req.body;
 
