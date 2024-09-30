@@ -26,6 +26,15 @@ module.exports.signUpRequest = async (req, res, next) => {
 
   const requestId = await client.get('request:id');
 
+  const isActive = await client.zAdd(
+    'users',
+    {
+      value: email,
+      score: requestId,
+    },
+    { NX: true }
+  );
+
   const isNew = await client.zAdd(
     'requests',
     {
@@ -36,6 +45,12 @@ module.exports.signUpRequest = async (req, res, next) => {
   );
 
   try {
+    if (!isActive) {
+      const err = new Error('This email already has an active user!');
+      err.statusCode = 400;
+      throw err;
+    }
+
     if (!isNew) {
       const err = new Error('Request already exists for this email!');
       err.statusCode = 400;
